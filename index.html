@@ -851,7 +851,7 @@ function buildSkuCard(sc){
         <div class="ico">🪵</div>
         <span>${ref}</span>
       </div>
-      <div class="queima-badge">🔥 QUEIMA</div>
+      <div class="queima-badge">🌳 QUEIMA</div>
     </div>
     <div class="sku-body">
       <div class="sku-ref">SKU: ${ref}</div>
@@ -898,7 +898,7 @@ function calcLoss(src,tgt){
 function lossClass(pct){return pct<=20?'low':pct<=50?'medium':'high';}
 function renderLossBox(loss){
   if(!loss) return`<div class="cut-arrow"><span style="font-size:22px">✂</span><span>cortar para</span></div>`;
-  const cls=lossClass(loss.pct),icon=loss.pct<=20?'✂':loss.pct<=50?'⚠':'🔥';
+  const cls=lossClass(loss.pct),icon=loss.pct<=20?'✂':loss.pct<=50?'⚠':'🌳';
   const barW=Math.min(100,loss.pct).toFixed(0);
   const barColor=cls==='low'?'#4fc3a1':cls==='medium'?'#f0a060':'#f06464';
   return`<div class="loss-box">
