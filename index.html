@@ -900,7 +900,7 @@ function renderLossBox(loss){
   if(!loss) return`<div class="cut-arrow"><span style="font-size:22px">✂</span><span>cortar para</span></div>`;
   const cls=lossClass(loss.pct),icon=loss.pct<=20?'✂':loss.pct<=50?'⚠':'🌳';
   const barW=Math.min(100,loss.pct).toFixed(0);
-  const barColor=cls==='low'?'#4fc3a1':cls==='medium'?'#f0a060':'#f06464';
+  const barColor=cls==='low'?'#4fc3a1':cls==='medium'?'#4adea0':'#f06464';
   return`<div class="loss-box">
     <div class="loss-icon">${icon}</div>
     <div class="loss-label">Perda de volume</div>
