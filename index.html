@@ -838,7 +838,8 @@ function renderQueima() {
   }
 
   el.innerHTML = html;
-}
+} // <-- Esta chave fecha o loop 'for' ou o 'if' (depende do seu código)
+} // <-- Esta chave fecha a função renderQueima
   // Lazy-load imagens após inserir no DOM
   el.querySelectorAll('.sku-img[data-src]').forEach(img=>{
     const src=img.dataset.src;
