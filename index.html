@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Relatório de Estoque — Painéis</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="s://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="s://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 :root {
   --bg: #0d0f14;
@@ -25,9 +25,9 @@
   --blue-dim: rgba(126,184,247,0.12);
   --purple: #b07ef7;
   --purple-dim: rgba(176,126,247,0.12);
-  --fire: #ff6b1a;
-  --fire-dim: rgba(255,107,26,0.12);
-  --gold: #e8c547;
+  --excess: #22c55e;
+  --excess-dim: rgba(34,197,94,0.12);
+  --excess-mid: rgba(34,197,94,0.22);
   --text: #e2e4ec;
   --muted: #7a8494;
   --muted2: #4a5260;
@@ -78,7 +78,7 @@ select:focus { border-color: var(--accent); }
 .tab:hover { color: var(--text); }
 .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 .tab.tab-fire { }
-.tab.tab-fire.active { color: var(--fire); border-bottom-color: var(--fire); }
+.tab.tab-fire.active { color: var(--accent); border-bottom-color: var(--accent); }
 .section { display: none; }
 .section.active { display: block; }
 
@@ -160,14 +160,14 @@ tbody tr:last-child td { border-bottom: none; }
 .cut-arrow { display:flex; align-items:center; justify-content:center; flex-direction:column; gap:4px; padding:8px 4px; color:var(--blue); font-size:18px; min-width:28px; }
 .cut-arrow span { font-size:9px; color:var(--muted); white-space:nowrap; text-align:center; }
 
-/* ══ QUEIMA DE ESTOQUE ════════════════════════════════════════ */
+/* ══ EXCESSO DE ESTOQUE ═══════════════════════════════════════ */
 
 /* Banner de topo */
 .queima-banner {
-  background: linear-gradient(135deg, #1a0a00 0%, #2d1200 50%, #1a0a00 100%);
-  border: 1px solid rgba(255,107,26,0.4);
+  background: linear-gradient(135deg, #061a0e 0%, #0d2b17 50%, #061a0e 100%);
+  border: 1px solid rgba(34,197,94,0.3);
   border-radius: 12px;
-  padding: 16px 24px;
+  padding: 18px 24px;
   margin-bottom: 20px;
   display: flex;
   align-items: center;
@@ -179,15 +179,15 @@ tbody tr:last-child td { border-bottom: none; }
   font-family: var(--font-head);
   font-size: 18px;
   font-weight: 800;
-  color: var(--fire);
+  color: var(--accent);
   letter-spacing: -0.3px;
 }
-.queima-subtitle { font-size: 12px; color: rgba(255,107,26,0.7); margin-top: 2px; }
+.queima-subtitle { font-size: 12px; color: rgba(34,197,94,0.6); margin-top: 2px; }
 .queima-total {
   font-family: var(--font-head);
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 800;
-  color: var(--gold);
+  color: var(--teal);
   text-align: right;
 }
 .queima-total-label { font-size: 10px; color: var(--muted); text-align: right; }
@@ -198,30 +198,33 @@ tbody tr:last-child td { border-bottom: none; }
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
+  padding: 14px 18px;
   background: var(--surface2);
-  border: 1px solid rgba(255,107,26,0.2);
+  border: 1px solid rgba(34,197,94,0.2);
   border-radius: 10px 10px 0 0;
   border-bottom: none;
   flex-wrap: wrap;
 }
 .medida-rank {
   font-family: var(--font-head);
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 800;
-  color: var(--fire);
-  min-width: 28px;
+  color: var(--accent);
+  min-width: 32px;
 }
 .medida-nome {
   font-family: var(--font-head);
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
   color: var(--text);
 }
-.medida-dims { font-size: 12px; color: var(--muted); }
+.medida-dims { font-size: 12px; color: var(--muted); margin-top: 2px; }
 .medida-estoque {
   margin-left: auto;
   text-align: right;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 .medida-estoque-val {
   font-family: var(--font-head);
@@ -231,12 +234,12 @@ tbody tr:last-child td { border-bottom: none; }
 }
 .medida-estoque-label { font-size: 10px; color: var(--muted); }
 
-/* Grid de cards SKU */
+/* Grid de cards SKU — cards maiores (~20%) */
 .sku-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 0;
-  border: 1px solid rgba(255,107,26,0.2);
+  border: 1px solid rgba(34,197,94,0.2);
   border-top: none;
   border-radius: 0 0 10px 10px;
   overflow: hidden;
@@ -254,7 +257,6 @@ tbody tr:last-child td { border-bottom: none; }
   cursor: default;
 }
 .sku-card:hover { background: var(--surface2); }
-.sku-card:last-child { border-right: none; }
 
 /* Imagem do produto */
 .sku-img-wrap {
@@ -282,66 +284,72 @@ tbody tr:last-child td { border-bottom: none; }
   flex-direction: column;
   gap: 6px;
   color: var(--muted2);
-  font-size: 11px;
+  font-size: 12px;
 }
-.sku-img-placeholder .ico { font-size: 28px; opacity: 0.3; }
+.sku-img-placeholder .ico { font-size: 32px; opacity: 0.25; }
 
-/* Badge QUEIMA no canto */
+/* Badge EXCESSO — verde corporativo */
 .queima-badge {
   position: absolute;
-  top: 8px;
+  top: 10px;
   left: 0;
-  background: var(--fire);
-  color: #fff;
+  background: var(--accent);
+  color: #061a0e;
   font-family: var(--font-head);
   font-size: 9px;
   font-weight: 800;
-  padding: 3px 8px 3px 6px;
-  border-radius: 0 4px 4px 0;
-  letter-spacing: 0.5px;
+  padding: 3px 10px 3px 7px;
+  border-radius: 0 5px 5px 0;
+  letter-spacing: 0.6px;
   text-transform: uppercase;
 }
 
-/* Corpo do card */
-.sku-body { padding: 10px 12px; flex: 1; display: flex; flex-direction: column; gap: 5px; }
+/* Corpo do card — padding maior */
+.sku-body { padding: 12px 14px; flex: 1; display: flex; flex-direction: column; gap: 6px; }
 .sku-ref {
   font-family: var(--font-head);
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 800;
   color: var(--text);
   letter-spacing: -0.3px;
 }
-.sku-especie { font-size: 11px; color: var(--muted); }
-.sku-medida  { font-size: 10px; color: var(--accent); font-weight: 600; }
+.sku-especie { font-size: 12px; color: var(--muted); }
+.sku-medida  { font-size: 11px; color: var(--accent); font-weight: 600; margin-bottom: 2px; }
 
-.sku-stats { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; }
-.sku-stat-row { display: flex; justify-content: space-between; align-items: center; font-size: 10px; }
+.sku-stats { display: flex; flex-direction: column; gap: 5px; margin-top: 4px; }
+.sku-stat-row { display: flex; justify-content: space-between; align-items: center; font-size: 11px; }
 .sku-stat-label { color: var(--muted); }
 .sku-stat-val   { font-weight: 600; color: var(--text); }
 .sku-stat-val.green  { color: var(--teal); }
 .sku-stat-val.orange { color: var(--warn); }
-.sku-stat-val.fire   { color: var(--fire); }
+.sku-stat-val.red    { color: var(--danger); }
+
+/* Divisor entre estoque e demanda */
+.sku-divider {
+  border: none;
+  border-top: 1px solid var(--border2);
+  margin: 4px 0;
+}
 
 /* Rodapé do card */
 .sku-footer {
-  padding: 6px 12px 10px;
+  padding: 8px 14px 12px;
   border-top: 1px solid var(--border);
-  font-size: 9px;
-  color: var(--muted2);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 6px;
 }
 .sku-saida {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--blue);
   font-weight: 600;
 }
 
-/* Loading queima */
+/* Loading / placeholder */
 .queima-loading { text-align:center; padding:60px 20px; color:var(--muted); }
 .queima-loading .spinner { margin:0 auto 12px; }
 
@@ -372,7 +380,7 @@ tbody tr:last-child td { border-bottom: none; }
     <label>🔗 Google Sheets</label>
     <input type="text" id="sheet-url"
       placeholder="Cole o link da planilha..."
-      value="https://docs.google.com/spreadsheets/d/1C9tUTh4QVT67UbAdx0j04CBnHAqrrV-28ozhG0RfTQ8/edit?gid=1769742644#gid=1769742644" />
+      value="s://docs.google.com/spreadsheets/d/1C9tUTh4QVT67UbAdx0j04CBnHAqrrV-28ozhG0RfTQ8/edit?gid=1769742644#gid=1769742644" />
     <button class="btn" onclick="loadSheet()">Carregar</button>
     <span id="status-msg">Aguardando...</span>
   </div>
@@ -402,7 +410,7 @@ tbody tr:last-child td { border-bottom: none; }
     <div class="tab active" onclick="switchTab('grafico')">Gráficos</div>
     <div class="tab" onclick="switchTab('tabela')">Por Espécie · Grupo · Medida</div>
     <div class="tab" onclick="switchTab('cross')">Substituição por Medida</div>
-    <div class="tab tab-fire" onclick="switchTab('queima')">🔥 Queima de Estoque</div>
+    <div class="tab tab-fire" onclick="switchTab('queima')">↑ Excesso de Estoque</div>
   </div>
 
   <!-- TAB GRÁFICOS -->
@@ -469,7 +477,8 @@ const C = {
   compr:4, larg:5, esp:6, status:7,
   estComp:8, estPCP:9, faltaAtual:10, faltaSeg:11,
   totalAtual:12, totalSeg:13, refInd:14, refAgrup:15, medida:16,
-  saidaSemestral:18   // col S (índice 18)
+  saidaSemestral:18,  // col S (índice 18)
+  demandaTotal:19     // col T (índice 19)
 };
 // ── COLUNAS pcp440 (0-based) ─────────────────────────────────
 const PCP = { ref:0, saidaVol:37 }; // col A=0, col AL=37
@@ -508,13 +517,13 @@ async function loadSheet() {
 
   try {
     // Busca aba principal
-    const res=await fetch(`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&gid=${gid}`);
-    if(!res.ok) throw new Error('HTTP '+res.status);
+    const res=await fetch(`s://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&gid=${gid}`);
+    if(!res.ok) throw new Error(' '+res.status);
     const text=await res.text();
     if(text.startsWith('<!DOCTYPE')) throw new Error('PRIVATE');
 
     // Busca aba pcp440 em paralelo
-    const resPcp=await fetch(`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=pcp440`);
+    const resPcp=await fetch(`s://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=pcp440`);
     if(resPcp.ok){
       const txtPcp=await resPcp.text();
       parsePcp440(txtPcp);
@@ -523,14 +532,14 @@ async function loadSheet() {
     parseData(text);
   } catch(e) {
     try {
-      const proxy='https://api.allorigins.win/raw?url=';
-      const su=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&gid=${gid}`;
+      const proxy='s://api.allorigins.win/raw?url=';
+      const su=`s://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&gid=${gid}`;
       const r2=await fetch(proxy+encodeURIComponent(su));
       if(!r2.ok) throw new Error('PROXY');
       parseData(await r2.text());
       // tenta pcp440 via proxy
       try {
-        const su2=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=pcp440`;
+        const su2=`s://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=pcp440`;
         const r3=await fetch(proxy+encodeURIComponent(su2));
         if(r3.ok) parsePcp440(await r3.text());
       } catch(_){}
@@ -591,6 +600,7 @@ function buildGrouped() {
         statuses:[], estPCP:0, estComp:0,
         faltaAtual:0, faltaSeg:0, totalAtual:0,
         saidaSemestral:0,
+        demandaTotal:0,
         refs:new Set(), refsAgrup:new Set()
       });
     }
@@ -601,6 +611,7 @@ function buildGrouped() {
     g.faltaSeg       +=num(row[C.faltaSeg]);
     g.totalAtual     +=num(row[C.totalAtual]);
     g.saidaSemestral +=num(row[C.saidaSemestral]);
+    g.demandaTotal   +=num(row[C.demandaTotal]);
     const st=cl(row[C.status]);
     if(hasDigit(go)&&st&&st!=='-'&&st!=='—') g.statuses.push(st);
     if(hasDigit(go)){
@@ -757,8 +768,9 @@ function renderQueima() {
   const byMedida={};
   for(const g of excessos){
     if(!g.medida||g.medida==='Sem Medida') continue;
-    if(!byMedida[g.medida]) byMedida[g.medida]={medida:g.medida,estPCP:0,grupos:[]};
-    byMedida[g.medida].estPCP+=g.estPCP;
+    if(!byMedida[g.medida]) byMedida[g.medida]={medida:g.medida,estPCP:0,demandaTotal:0,grupos:[]};
+    byMedida[g.medida].estPCP      +=g.estPCP;
+    byMedida[g.medida].demandaTotal+=g.demandaTotal;
     byMedida[g.medida].grupos.push(g);
   }
 
@@ -775,8 +787,8 @@ function renderQueima() {
   let html=`
   <div class="queima-banner">
     <div>
-      <div class="queima-title">🔥 QUEIMA DE ESTOQUE — TOP 5 MEDIDAS</div>
-      <div class="queima-subtitle">Maiores estoques em excesso · Prioridade para oferta comercial</div>
+      <div class="queima-title">↑ EXCESSO DE ESTOQUE — TOP 5 MEDIDAS</div>
+      <div class="queima-subtitle">Maiores volumes disponíveis · Prioridade para oferta ao comercial</div>
     </div>
     <div>
       <div class="queima-total">${fmt(totalExcesso)} un</div>
@@ -798,7 +810,7 @@ function renderQueima() {
       for(const ref of refs){
         if(!ref) continue;
         const volSaida=pcpMap.get(ref)||0;
-        skuCards.push({ref, grupo:g, volSaida});
+        skuCards.push({ref, grupo:g, volSaida, demandaTotal:g.demandaTotal});
       }
     }
 
@@ -815,8 +827,9 @@ function renderQueima() {
           ${dims?`<div class="medida-dims">${dims} mm · ${medObj.grupos.length} grupo(s) em excesso · ${skuCards.length} SKU(s)</div>`:''}
         </div>
         <div class="medida-estoque">
-          <div class="medida-estoque-val">${fmt(medObj.estPCP)}</div>
-          <div class="medida-estoque-label">unidades em estoque PCP</div>
+          <div class="medida-estoque-val">${fmt(medObj.estPCP)} un</div>
+          <div class="medida-estoque-label">estoque PCP disponível</div>
+          ${medObj.demandaTotal>0?`<div style="font-size:11px;color:var(--warn);font-weight:600;margin-top:3px">${fmt(medObj.demandaTotal)} un faltantes</div>`:''}
         </div>
       </div>
       <div class="sku-grid">
@@ -839,7 +852,7 @@ function renderQueima() {
 }
 
 function buildSkuCard(sc){
-  const {ref, grupo:g, volSaida}=sc;
+  const {ref, grupo:g, volSaida, demandaTotal}=sc;
   const imgUrl=`https://assets.tramontina.com.br/upload/tramon/imagens/BEL/${ref}PDM001G.jpg`;
 
   return `
@@ -851,7 +864,7 @@ function buildSkuCard(sc){
         <div class="ico">🪵</div>
         <span>${ref}</span>
       </div>
-      <div class="queima-badge">🔥 QUEIMA</div>
+      <div class="queima-badge">↑ EXCESSO</div>
     </div>
     <div class="sku-body">
       <div class="sku-ref">SKU: ${ref}</div>
@@ -859,20 +872,25 @@ function buildSkuCard(sc){
       <div class="sku-medida">${g.medida}</div>
       <div class="sku-stats">
         <div class="sku-stat-row">
-          <span class="sku-stat-label">Est. PCP</span>
-          <span class="sku-stat-val green">${fmt(g.estPCP)} un</span>
+          <span class="sku-stat-label">Padrão</span>
+          <span class="sku-stat-val">${g.padrao||'—'}</span>
         </div>
         <div class="sku-stat-row">
           <span class="sku-stat-label">Dimensões</span>
           <span class="sku-stat-val">${[g.compr,g.larg,g.esp].filter(Boolean).join(' × ')} mm</span>
         </div>
         <div class="sku-stat-row">
-          <span class="sku-stat-label">Padrão</span>
-          <span class="sku-stat-val">${g.padrao||'—'}</span>
-        </div>
-        <div class="sku-stat-row">
           <span class="sku-stat-label">Status</span>
           <span class="sku-stat-val">${badge(g.statusFinal)}</span>
+        </div>
+        <hr class="sku-divider">
+        <div class="sku-stat-row">
+          <span class="sku-stat-label">Estoque PCP</span>
+          <span class="sku-stat-val green">${fmt(g.estPCP)} un</span>
+        </div>
+        <div class="sku-stat-row">
+          <span class="sku-stat-label">Demanda faltante</span>
+          <span class="sku-stat-val ${demandaTotal>0?'red':'green'}">${demandaTotal>0?fmt(demandaTotal)+' un':'—'}</span>
         </div>
       </div>
     </div>
