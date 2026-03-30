@@ -481,7 +481,7 @@ const C = {
   demandaTotal:19     // col T (índice 19)
 };
 // ── COLUNAS pcp440 (0-based) ─────────────────────────────────
-const PCP = { ref:0, saidaVol:37 }; // col A=0, col AL=37
+const PCP = { ref:0, saidaVol:37, preco:39 }; // col A=0, col AL=37, col AN=39
 
 let allRows=[], grouped=[], filtered=[];
 let pcpMap = new Map();   // ref → volume saída pcp440
@@ -553,17 +553,23 @@ async function loadSheet() {
 // Col A = referência, Col AL (índice 37) = volume saída
 function parsePcp440(text) {
   pcpMap.clear();
-  const lines=text.trim().split('\n');
-  for(let i=1;i<lines.length;i++){
-    const cols=splitLine(lines[i]);
-    const ref=cl(cols[PCP.ref]);
-    const vol=num(cols[PCP.saidaVol]);
-    if(!ref) continue;
-    // acumula caso ref apareça mais de uma vez
-    pcpMap.set(ref, (pcpMap.get(ref)||0) + vol);
+  const lines = text.trim().split('\n');
+  for (let i = 1; i < lines.length; i++) {
+    const cols = splitLine(lines[i]);
+    const ref = cl(cols[PCP.ref]);
+    const vol = num(cols[PCP.saidaVol]);
+    const prc = num(cols[PCP.preco]); // <--- Captura o valor da coluna AN
+
+    if (!ref) continue;
+
+    // Criamos um objeto para guardar Volume e Preço juntos
+    const existente = pcpMap.get(ref) || { vol: 0, preco: 0 };
+    pcpMap.set(ref, { 
+      vol: existente.vol + vol, 
+      preco: prc || existente.preco 
+    });
   }
 }
-
 // ── PARSE PRINCIPAL ──────────────────────────────────────────
 function parseData(text) {
   const lines=text.trim().split('\n');
@@ -809,8 +815,9 @@ function renderQueima() {
         : g.refs; // fallback para individuais se agrupadas vazias
       for(const ref of refs){
         if(!ref) continue;
-        const volSaida=pcpMap.get(ref)||0;
-        skuCards.push({ref, grupo:g, volSaida, demandaTotal:g.demandaTotal});
+        const pcpData = pcpMap.get(ref) || { vol: 0, preco: 0 };
+const volSaida = pcpData.vol; 
+skuCards.push({ref, grupo:g, volSaida, demandaTotal:g.demandaTotal});
       }
     }
 
