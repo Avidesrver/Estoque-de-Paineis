@@ -481,7 +481,7 @@ const C = {
   demandaTotal:19     // col T (índice 19)
 };
 // ── COLUNAS pcp440 (0-based) ─────────────────────────────────
-const PCP = { ref:0, saidaVol:37, preco:39 }; // col A=0, col AL=37, col AN=39
+const PCP = { ref:0, saidaVol:37 }; // col A=0, col AL=37
 
 let allRows=[], grouped=[], filtered=[];
 let pcpMap = new Map();   // ref → volume saída pcp440
@@ -553,23 +553,17 @@ async function loadSheet() {
 // Col A = referência, Col AL (índice 37) = volume saída
 function parsePcp440(text) {
   pcpMap.clear();
-  const lines = text.trim().split('\n');
-  for (let i = 1; i < lines.length; i++) {
-    const cols = splitLine(lines[i]);
-    const ref = cl(cols[PCP.ref]);
-    const vol = num(cols[PCP.saidaVol]);
-    const prc = num(cols[PCP.preco]); // <--- Captura o valor da coluna AN
-
-    if (!ref) continue;
-
-    // Criamos um objeto para guardar Volume e Preço juntos
-    const existente = pcpMap.get(ref) || { vol: 0, preco: 0 };
-    pcpMap.set(ref, { 
-      vol: existente.vol + vol, 
-      preco: prc || existente.preco 
-    });
+  const lines=text.trim().split('\n');
+  for(let i=1;i<lines.length;i++){
+    const cols=splitLine(lines[i]);
+    const ref=cl(cols[PCP.ref]);
+    const vol=num(cols[PCP.saidaVol]);
+    if(!ref) continue;
+    // acumula caso ref apareça mais de uma vez
+    pcpMap.set(ref, (pcpMap.get(ref)||0) + vol);
   }
 }
+
 // ── PARSE PRINCIPAL ──────────────────────────────────────────
 function parseData(text) {
   const lines=text.trim().split('\n');
@@ -761,49 +755,92 @@ function renderTable(){
 // ══════════════════════════════════════════════════════════════
 
 function renderQueima() {
-  const el = document.getElementById('queima-content');
-  if (!el) return;
+  const el=document.getElementById('queima-content');
 
-  const excessos = filtered.filter(g => g.statusFinal && g.statusFinal.includes('Excesso'));
-  if (!excessos.length) {
-    el.innerHTML = '<div class="placeholder">✅ Nenhum grupo em excesso</div>';
+  // Apenas grupos com status Excesso
+  const excessos=filtered.filter(g=>g.statusFinal.includes('Excesso'));
+  if(!excessos.length){
+    el.innerHTML='<div class="placeholder"><div class="ico">✅</div><p>Nenhum grupo em excesso nos filtros atuais</p></div>';
     return;
   }
 
-  const byMedida = {};
-  for (const g of excessos) {
-    if (!g.medida) continue;
-    if (!byMedida[g.medida]) byMedida[g.medida] = { medida: g.medida, estPCP: 0, grupos: [] };
-    byMedida[g.medida].estPCP += g.estPCP || 0;
+  // Agrupa por medida mestre, soma estPCP
+  const byMedida={};
+  for(const g of excessos){
+    if(!g.medida||g.medida==='Sem Medida') continue;
+    if(!byMedida[g.medida]) byMedida[g.medida]={medida:g.medida,estPCP:0,demandaTotal:0,grupos:[]};
+    byMedida[g.medida].estPCP      +=g.estPCP;
+    byMedida[g.medida].demandaTotal+=g.demandaTotal;
     byMedida[g.medida].grupos.push(g);
   }
 
-  const top5 = Object.values(byMedida).sort((a, b) => b.estPCP - a.estPCP).slice(0, 5);
-  let html = `<div class="queima-banner">Top 5 Excesso</div>`;
+  // Top 5 por estPCP
+  const top5=Object.values(byMedida)
+    .sort((a,b)=>b.estPCP-a.estPCP)
+    .slice(0,5);
 
-  for (let ri = 0; ri < top5.length; ri++) {
-    const medObj = top5[ri];
-    const skuCards = [];
+  const totalExcesso=top5.reduce((s,m)=>s+m.estPCP,0);
+  const totalSkus=top5.reduce((s,m)=>s+m.grupos.reduce((ss,g)=>ss+g.refsAgrup.length,0),0);
 
-    for (const g of medObj.grupos) {
-      const refs = g.refsAgrup && g.refsAgrup.length ? g.refsAgrup : (g.refs || []);
-      for (const ref of refs) {
-        if (!ref) continue;
-        const pcpData = pcpMap.get(ref) || { vol: 0, preco: 0 };
-        skuCards.push({ ref, grupo: g, volSaida: pcpData.vol, demandaTotal: g.demandaTotal });
+  const rankEmojis=['🥇','🥈','🥉','4️⃣','5️⃣'];
+
+  let html=`
+  <div class="queima-banner">
+    <div>
+      <div class="queima-title">↑ EXCESSO DE ESTOQUE — TOP 5 MEDIDAS</div>
+      <div class="queima-subtitle">Maiores volumes disponíveis · Prioridade para oferta ao comercial</div>
+    </div>
+    <div>
+      <div class="queima-total">${fmt(totalExcesso)} un</div>
+      <div class="queima-total-label">total em excesso (top 5)</div>
+    </div>
+  </div>`;
+
+  for(let ri=0;ri<top5.length;ri++){
+    const medObj=top5[ri];
+
+    // Explode todas as referências agrupadas (col P) de todos os grupos em excesso dessa medida
+    // Cada ref → 1 card
+    const skuCards=[];
+    for(const g of medObj.grupos){
+      // split col P por vírgula ou ponto-e-vírgula
+      const refs=g.refsAgrup.length
+        ? g.refsAgrup
+        : g.refs; // fallback para individuais se agrupadas vazias
+      for(const ref of refs){
+        if(!ref) continue;
+        const volSaida=pcpMap.get(ref)||0;
+        skuCards.push({ref, grupo:g, volSaida, demandaTotal:g.demandaTotal});
       }
     }
 
-    html += `
-      <div class="medida-section">
-        <div class="medida-header"><strong>${medObj.medida}</strong></div>
-        <div class="sku-grid">${skuCards.map(sc => buildSkuCard(sc)).join('')}</div>
-      </div>`;
+    // Dimensões da medida (pega do primeiro grupo)
+    const sample=medObj.grupos[0];
+    const dims=[sample.compr,sample.larg,sample.esp].filter(Boolean).join(' × ');
+
+    html+=`
+    <div class="medida-section">
+      <div class="medida-header">
+        <div class="medida-rank">${rankEmojis[ri]}</div>
+        <div>
+          <div class="medida-nome">${medObj.medida}</div>
+          ${dims?`<div class="medida-dims">${dims} mm · ${medObj.grupos.length} grupo(s) em excesso · ${skuCards.length} SKU(s)</div>`:''}
+        </div>
+        <div class="medida-estoque">
+          <div class="medida-estoque-val">${fmt(medObj.estPCP)} un</div>
+          <div class="medida-estoque-label">estoque PCP disponível</div>
+          ${medObj.demandaTotal>0?`<div style="font-size:11px;color:var(--warn);font-weight:600;margin-top:3px">${fmt(medObj.demandaTotal)} un faltantes</div>`:''}
+        </div>
+      </div>
+      <div class="sku-grid">
+        ${skuCards.map(sc=>buildSkuCard(sc)).join('')}
+        ${skuCards.length===0?'<div style="padding:24px;color:var(--muted);font-size:12px">Nenhuma referência disponível nesta medida</div>':''}
+      </div>
+    </div>`;
   }
-  el.innerHTML = html;
-}
-}
-  
+
+  el.innerHTML=html;
+
   // Lazy-load imagens após inserir no DOM
   el.querySelectorAll('.sku-img[data-src]').forEach(img=>{
     const src=img.dataset.src;
@@ -812,12 +849,10 @@ function renderQueima() {
     tmp.onerror=()=>{ img.style.display='none'; };
     tmp.src=src;
   });
+}
 
 function buildSkuCard(sc){
-  const pcpData = pcpMap.get(ref) || { vol: 0, preco: 0 };
-const precoFmt = pcpData.preco > 0 
-  ? pcpData.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) 
-  : '—';
+  const {ref, grupo:g, volSaida, demandaTotal}=sc;
   const imgUrl=`https://assets.tramontina.com.br/upload/tramon/imagens/BEL/${ref}PDM001G.jpg`;
 
   return `
@@ -837,13 +872,8 @@ const precoFmt = pcpData.preco > 0
       <div class="sku-medida">${g.medida}</div>
       <div class="sku-stats">
         <div class="sku-stat-row">
-          <span class="sku-stat-label">Status</span>
-          <span class="sku-stat-val">${badge(g.statusFinal)}</span>
-        </div>
-        
-        <div class="sku-stat-row">
-          <span class="sku-stat-label">Preço Médio</span>
-          <span class="sku-stat-val" style="color:var(--teal); font-weight:bold;">${precoFmt}</span>
+          <span class="sku-stat-label">Padrão</span>
+          <span class="sku-stat-val">${g.padrao||'—'}</span>
         </div>
         <div class="sku-stat-row">
           <span class="sku-stat-label">Dimensões</span>
