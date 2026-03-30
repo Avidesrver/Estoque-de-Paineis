@@ -19,14 +19,14 @@
   --teal-dim: rgba(79,195,161,0.12);
   --danger: #f06464;
   --danger-dim: rgba(240,100,100,0.12);
-  --warn: #4adea0;
-  --warn-dim: rgba(74, 222, 160, 0.12);
+  --warn: #f0a060;
+  --warn-dim: rgba(240,160,96,0.12);
   --blue: #7eb8f7;
   --blue-dim: rgba(126,184,247,0.12);
   --purple: #b07ef7;
   --purple-dim: rgba(176,126,247,0.12);
-  --fire: #4adea0;
-  --fire-dim: rgba(74, 222, 160, 0.12);
+  --fire: #ff6b1a;
+  --fire-dim: rgba(255,107,26,0.12);
   --gold: #e8c547;
   --text: #e2e4ec;
   --muted: #7a8494;
@@ -163,7 +163,7 @@ tbody tr:last-child td { border-bottom: none; }
 /* ══ QUEIMA DE ESTOQUE ════════════════════════════════════════ */
 
 /* Banner de topo */
-.Excesso-banner {
+.queima-banner {
   background: linear-gradient(135deg, #1a0a00 0%, #2d1200 50%, #1a0a00 100%);
   border: 1px solid rgba(255,107,26,0.4);
   border-radius: 12px;
@@ -287,7 +287,7 @@ tbody tr:last-child td { border-bottom: none; }
 .sku-img-placeholder .ico { font-size: 28px; opacity: 0.3; }
 
 /* Badge QUEIMA no canto */
-.Excesso-badge {
+.queima-badge {
   position: absolute;
   top: 8px;
   left: 0;
@@ -363,7 +363,7 @@ tbody tr:last-child td { border-bottom: none; }
 
   <div class="header">
     <div>
-      <h1><span style="color:#22c55e;">AVIDES - ESTOQUES DE PAINÉIS</span></h1>
+      <h1><span style="color:#22c55e;">Avides</span> Estoque de Painéis</h1>
       <p id="last-update">Conecte a planilha para carregar os dados</p>
     </div>
   </div>
@@ -402,7 +402,7 @@ tbody tr:last-child td { border-bottom: none; }
     <div class="tab active" onclick="switchTab('grafico')">Gráficos</div>
     <div class="tab" onclick="switchTab('tabela')">Por Espécie · Grupo · Medida</div>
     <div class="tab" onclick="switchTab('cross')">Substituição por Medida</div>
-    <div class="tab tab-fire" onclick="switchTab('queima')">🌳 Excessos de Estoque</div>
+    <div class="tab tab-fire" onclick="switchTab('queima')">🔥 Queima de Estoque</div>
   </div>
 
   <!-- TAB GRÁFICOS -->
@@ -457,7 +457,7 @@ tbody tr:last-child td { border-bottom: none; }
   <!-- TAB QUEIMA -->
   <div class="section" id="tab-queima">
     <div id="queima-content">
-      <div class="placeholder"><div class="ico">🌳</div><p>Carregue os dados para ver a queima de estoque</p></div>
+      <div class="placeholder"><div class="ico">🔥</div><p>Carregue os dados para ver a queima de estoque</p></div>
     </div>
   </div>
 
@@ -775,11 +775,11 @@ function renderQueima() {
   let html=`
   <div class="queima-banner">
     <div>
-      <div class="queima-title">🌳 EXCESSOS DE ESTOQUES — TOP 5 MEDIDAS</div>
+      <div class="queima-title">🔥 QUEIMA DE ESTOQUE — TOP 5 MEDIDAS</div>
       <div class="queima-subtitle">Maiores estoques em excesso · Prioridade para oferta comercial</div>
     </div>
     <div>
-      <div class="queima-total">${fmt(totalExcesso)} d³</div>
+      <div class="queima-total">${fmt(totalExcesso)} un</div>
       <div class="queima-total-label">total em excesso (top 5)</div>
     </div>
   </div>`;
@@ -840,7 +840,7 @@ function renderQueima() {
 
 function buildSkuCard(sc){
   const {ref, grupo:g, volSaida}=sc;
-  const imgUrl=`https://assets.tramontina.com.br/upload/tramon/imagens/BEL/${ref}PDM001G.jpg`;
+  const imgUrl=`http://assets.tramontina.com.br/upload/tramon/imagens/BEL/${ref}PDM001G.jpg`;
 
   return `
   <div class="sku-card">
@@ -851,7 +851,7 @@ function buildSkuCard(sc){
         <div class="ico">🪵</div>
         <span>${ref}</span>
       </div>
-      <div class="excesso-badge">🌳 Excesso</div>
+      <div class="queima-badge">🔥 QUEIMA</div>
     </div>
     <div class="sku-body">
       <div class="sku-ref">SKU: ${ref}</div>
@@ -898,9 +898,9 @@ function calcLoss(src,tgt){
 function lossClass(pct){return pct<=20?'low':pct<=50?'medium':'high';}
 function renderLossBox(loss){
   if(!loss) return`<div class="cut-arrow"><span style="font-size:22px">✂</span><span>cortar para</span></div>`;
-  const cls=lossClass(loss.pct),icon=loss.pct<=20?'✂':loss.pct<=50?'⚠':'🌳';
+  const cls=lossClass(loss.pct),icon=loss.pct<=20?'✂':loss.pct<=50?'⚠':'🔥';
   const barW=Math.min(100,loss.pct).toFixed(0);
-  const barColor=cls==='low'?'#4fc3a1':cls==='medium'?'#4adea0':'#f06464';
+  const barColor=cls==='low'?'#4fc3a1':cls==='medium'?'#f0a060':'#f06464';
   return`<div class="loss-box">
     <div class="loss-icon">${icon}</div>
     <div class="loss-label">Perda de volume</div>
