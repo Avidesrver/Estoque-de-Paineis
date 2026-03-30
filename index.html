@@ -481,7 +481,7 @@ const C = {
   demandaTotal:19     // col T (índice 19)
 };
 // ── COLUNAS pcp440 (0-based) ─────────────────────────────────
-const PCP = { ref:0, saidaVol:37, preco:39 }; // col A=0, col AL=37, col AN=39
+const PCP = { ref:0, saidaVol:37 }; // col A=0, col AL=37
 
 let allRows=[], grouped=[], filtered=[];
 let pcpMap = new Map();   // ref → volume saída pcp440
@@ -551,22 +551,16 @@ async function loadSheet() {
 
 // ── PARSE PCP440 ─────────────────────────────────────────────
 // Col A = referência, Col AL (índice 37) = volume saída
-pcpMap.clear();
-  const lines = text.trim().split('\n');
-  for(let i=1; i<lines.length; i++){
-    const cols = splitLine(lines[i]);
-    const ref = cl(cols[PCP.ref]);
-    const vol = num(cols[PCP.saidaVol]);
-    const prc = num(cols[PCP.preco]); // Pega o valor da coluna AN
-
+function parsePcp440(text) {
+  pcpMap.clear();
+  const lines=text.trim().split('\n');
+  for(let i=1;i<lines.length;i++){
+    const cols=splitLine(lines[i]);
+    const ref=cl(cols[PCP.ref]);
+    const vol=num(cols[PCP.saidaVol]);
     if(!ref) continue;
-    
-    // Se a referência já existe, soma o volume. O preço a gente mantém o que vier.
-    const existente = pcpMap.get(ref) || { vol: 0, preco: 0 };
-    pcpMap.set(ref, { 
-      vol: existente.vol + vol, 
-      preco: prc || existente.preco 
-    });
+    // acumula caso ref apareça mais de uma vez
+    pcpMap.set(ref, (pcpMap.get(ref)||0) + vol);
   }
 }
 
@@ -857,17 +851,9 @@ function renderQueima() {
   });
 }
 
-function buildSkuCard(sc) {
-  const { ref, grupo: g, volSaida, demandaTotal } = sc;
-  const imgUrl = `https://assets.tramontina.com.br/upload/tramon/imagens/BEL/${ref}PDM001G.jpg`;
-
-  // 1. Buscamos o objeto completo no mapa (que criamos no passo anterior)
-  const dadosPCP = pcpMap.get(ref) || { vol: 0, preco: 0 };
-  
-  // 2. Formatamos o preço como Moeda Brasileira
-  const precoFormatado = dadosPCP.preco > 0 
-    ? dadosPCP.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) 
-    : '—';
+function buildSkuCard(sc){
+  const {ref, grupo:g, volSaida, demandaTotal}=sc;
+  const imgUrl=`http://assets.tramontina.com.br/upload/tramon/imagens/BEL/${ref}PDM001G.jpg`;
 
   return `
   <div class="sku-card">
@@ -887,22 +873,16 @@ function buildSkuCard(sc) {
       <div class="sku-stats">
         <div class="sku-stat-row">
           <span class="sku-stat-label">Padrão</span>
-          <span class="sku-stat-val">${g.padrao || '—'}</span>
+          <span class="sku-stat-val">${g.padrao||'—'}</span>
         </div>
         <div class="sku-stat-row">
           <span class="sku-stat-label">Dimensões</span>
-          <span class="sku-stat-val">${[g.compr, g.larg, g.esp].filter(Boolean).join(' × ')} mm</span>
+          <span class="sku-stat-val">${[g.compr,g.larg,g.esp].filter(Boolean).join(' × ')} mm</span>
         </div>
         <div class="sku-stat-row">
           <span class="sku-stat-label">Status</span>
           <span class="sku-stat-val">${badge(g.statusFinal)}</span>
         </div>
-
-        <div class="sku-stat-row">
-          <span class="sku-stat-label">Preço Médio</span>
-          <span class="sku-stat-val" style="color:var(--teal)">${precoFormatado}</span>
-        </div>
-
         <hr class="sku-divider">
         <div class="sku-stat-row">
           <span class="sku-stat-label">Estoque PCP</span>
@@ -910,7 +890,7 @@ function buildSkuCard(sc) {
         </div>
         <div class="sku-stat-row">
           <span class="sku-stat-label">Demanda faltante</span>
-          <span class="sku-stat-val ${demandaTotal > 0 ? 'red' : 'green'}">${demandaTotal > 0 ? fmt(demandaTotal) + ' un' : '—'}</span>
+          <span class="sku-stat-val ${demandaTotal>0?'red':'green'}">${demandaTotal>0?fmt(demandaTotal)+' un':'—'}</span>
         </div>
       </div>
     </div>
