@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Relatório de Estoque — Painéis</title>
-<link href="s://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
-<script src="s://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 :root {
   --bg: #0d0f14;
@@ -380,7 +380,7 @@ tbody tr:last-child td { border-bottom: none; }
     <label>🔗 Google Sheets</label>
     <input type="text" id="sheet-url"
       placeholder="Cole o link da planilha..."
-      value="s://docs.google.com/spreadsheets/d/1C9tUTh4QVT67UbAdx0j04CBnHAqrrV-28ozhG0RfTQ8/edit?gid=1769742644#gid=1769742644" />
+      value="https://docs.google.com/spreadsheets/d/1C9tUTh4QVT67UbAdx0j04CBnHAqrrV-28ozhG0RfTQ8/edit?gid=1769742644#gid=1769742644" />
     <button class="btn" onclick="loadSheet()">Carregar</button>
     <span id="status-msg">Aguardando...</span>
   </div>
@@ -517,13 +517,13 @@ async function loadSheet() {
 
   try {
     // Busca aba principal
-    const res=await fetch(`s://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&gid=${gid}`);
-    if(!res.ok) throw new Error(' '+res.status);
+    const res=await fetch(`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&gid=${gid}`);
+    if(!res.ok) throw new Error('https'+res.status);
     const text=await res.text();
     if(text.startsWith('<!DOCTYPE')) throw new Error('PRIVATE');
 
     // Busca aba pcp440 em paralelo
-    const resPcp=await fetch(`s://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=pcp440`);
+    const resPcp=await fetch(`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=pcp440`);
     if(resPcp.ok){
       const txtPcp=await resPcp.text();
       parsePcp440(txtPcp);
@@ -532,14 +532,14 @@ async function loadSheet() {
     parseData(text);
   } catch(e) {
     try {
-      const proxy='s://api.allorigins.win/raw?url=';
-      const su=`s://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&gid=${gid}`;
+      const proxy='https://api.allorigins.win/raw?url=';
+      const su=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&gid=${gid}`;
       const r2=await fetch(proxy+encodeURIComponent(su));
       if(!r2.ok) throw new Error('PROXY');
       parseData(await r2.text());
       // tenta pcp440 via proxy
       try {
-        const su2=`s://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=pcp440`;
+        const su2=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=pcp440`;
         const r3=await fetch(proxy+encodeURIComponent(su2));
         if(r3.ok) parsePcp440(await r3.text());
       } catch(_){}
