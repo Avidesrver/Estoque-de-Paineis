@@ -859,7 +859,10 @@ skuCards.push({ref, grupo:g, volSaida, demandaTotal:g.demandaTotal});
 }
 
 function buildSkuCard(sc){
-  const {ref, grupo:g, volSaida, demandaTotal}=sc;
+  const pcpData = pcpMap.get(ref) || { vol: 0, preco: 0 };
+const precoFmt = pcpData.preco > 0 
+  ? pcpData.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) 
+  : '—';
   const imgUrl=`https://assets.tramontina.com.br/upload/tramon/imagens/BEL/${ref}PDM001G.jpg`;
 
   return `
@@ -879,8 +882,13 @@ function buildSkuCard(sc){
       <div class="sku-medida">${g.medida}</div>
       <div class="sku-stats">
         <div class="sku-stat-row">
-          <span class="sku-stat-label">Padrão</span>
-          <span class="sku-stat-val">${g.padrao||'—'}</span>
+          <span class="sku-stat-label">Status</span>
+          <span class="sku-stat-val">${badge(g.statusFinal)}</span>
+        </div>
+        
+        <div class="sku-stat-row">
+          <span class="sku-stat-label">Preço Médio</span>
+          <span class="sku-stat-val" style="color:var(--teal); font-weight:bold;">${precoFmt}</span>
         </div>
         <div class="sku-stat-row">
           <span class="sku-stat-label">Dimensões</span>
