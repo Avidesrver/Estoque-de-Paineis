@@ -764,39 +764,22 @@ function renderQueima() {
   const el = document.getElementById('queima-content');
   if (!el) return;
 
-  // 1. Filtra apenas quem tem excesso
   const excessos = filtered.filter(g => g.statusFinal && g.statusFinal.includes('Excesso'));
-  
   if (!excessos.length) {
-    el.innerHTML = '<div class="placeholder"><div class="ico">✅</div><p>Nenhum grupo em excesso nos filtros atuais</p></div>';
+    el.innerHTML = '<div class="placeholder">✅ Nenhum grupo em excesso</div>';
     return;
   }
 
-  // 2. Agrupa por medida para o Top 5
   const byMedida = {};
   for (const g of excessos) {
-    if (!g.medida || g.medida === 'Sem Medida') continue;
-    if (!byMedida[g.medida]) byMedida[g.medida] = { medida: g.medida, estPCP: 0, demandaTotal: 0, grupos: [] };
+    if (!g.medida) continue;
+    if (!byMedida[g.medida]) byMedida[g.medida] = { medida: g.medida, estPCP: 0, grupos: [] };
     byMedida[g.medida].estPCP += g.estPCP || 0;
-    byMedida[g.medida].demandaTotal += g.demandaTotal || 0;
     byMedida[g.medida].grupos.push(g);
   }
 
   const top5 = Object.values(byMedida).sort((a, b) => b.estPCP - a.estPCP).slice(0, 5);
-  const totalExcesso = top5.reduce((s, m) => s + m.estPCP, 0);
-  const rankEmojis = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
-
-  let html = `
-    <div class="queima-banner">
-      <div>
-        <div class="queima-title">↑ EXCESSO DE ESTOQUE — TOP 5 MEDIDAS</div>
-        <div class="queima-subtitle">Maiores volumes disponíveis · Prioridade para oferta ao comercial</div>
-      </div>
-      <div>
-        <div class="queima-total">${fmt(totalExcesso)} un</div>
-        <div class="queima-total-label">total em excesso (top 5)</div>
-      </div>
-    </div>`;
+  let html = `<div class="queima-banner">Top 5 Excesso</div>`;
 
   for (let ri = 0; ri < top5.length; ri++) {
     const medObj = top5[ri];
@@ -806,40 +789,21 @@ function renderQueima() {
       const refs = g.refsAgrup && g.refsAgrup.length ? g.refsAgrup : (g.refs || []);
       for (const ref of refs) {
         if (!ref) continue;
-        
-        // --- TRATAMENTO DO PREÇO PARA NÃO TRAVAR ---
         const pcpData = pcpMap.get(ref) || { vol: 0, preco: 0 };
-        const volSaida = pcpData.vol || 0; 
-        
-        skuCards.push({ ref, grupo: g, volSaida, demandaTotal: g.demandaTotal });
+        skuCards.push({ ref, grupo: g, volSaida: pcpData.vol, demandaTotal: g.demandaTotal });
       }
     }
 
-    const sample = medObj.grupos[0];
-    const dims = [sample.compr, sample.larg, sample.esp].filter(Boolean).join(' × ');
-
     html += `
       <div class="medida-section">
-        <div class="medida-header">
-          <div class="medida-rank">${rankEmojis[ri]}</div>
-          <div>
-            <div class="medida-nome">${medObj.medida}</div>
-            <div class="medida-dims">${dims} mm · ${skuCards.length} SKU(s)</div>
-          </div>
-          <div class="medida-estoque">
-            <div class="medida-estoque-val">${fmt(medObj.estPCP)} un</div>
-            <div class="medida-estoque-label">estoque PCP</div>
-          </div>
-        </div>
-        <div class="sku-grid">
-          ${skuCards.map(sc => buildSkuCard(sc)).join('')}
-        </div>
+        <div class="medida-header"><strong>${medObj.medida}</strong></div>
+        <div class="sku-grid">${skuCards.map(sc => buildSkuCard(sc)).join('')}</div>
       </div>`;
   }
-
   el.innerHTML = html;
-} // <-- Esta chave fecha o loop 'for' ou o 'if' (depende do seu código)
-} // <-- Esta chave fecha a função renderQueima
+}
+
+  
   // Lazy-load imagens após inserir no DOM
   el.querySelectorAll('.sku-img[data-src]').forEach(img=>{
     const src=img.dataset.src;
