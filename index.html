@@ -879,7 +879,7 @@ function buildSkuCard(sc){
   const fin = pcpFinMap.get(ref) || {preco:0, cpv:0, margem:0};
   const mgColor = fin.margem < 0 
   ? 'var(--danger)'           // Vermelho para prejuízo
-  : (fin.margem > 1 
+  : (fin.margem > 10 
       ? 'var(--accent)'       // Verde apenas acima de 10%
       : 'var(--warn)');       // Amarelo/Laranja entre 0% e 10%
 
