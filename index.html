@@ -400,8 +400,8 @@ tbody tr:last-child td { border-bottom: none; }
   <div class="summary-cards">
     <div class="scard c-accent"><div class="scard-label">Espécies</div><div class="scard-value" id="c-especies">—</div><div class="scard-sub">tipos distintos</div></div>
     <div class="scard"><div class="scard-label">Grupos</div><div class="scard-value" id="c-grupos">—</div><div class="scard-sub">grupos mestre</div></div>
-    <div class="scard c-teal"><div class="scard-label">Estoque PCP</div><div class="scard-value" id="c-pcp">—</div><div class="scard-sub">confiável</div></div>
-    <div class="scard c-warn"><div class="scard-label">Est. Compras</div><div class="scard-value" id="c-comp">—</div><div class="scard-sub">⚠ não confiável</div></div>
+    <div class="scard c-teal"><div class="scard-label">Estoque PCP</div><div class="scard-value" id="c-pcp">—</div><div class="scard-sub">confiável (m³)</div></div>
+    <div class="scard c-warn"><div class="scard-label">Est. Compras</div><div class="scard-value" id="c-comp">—</div><div class="scard-sub">⚠ não confiável (m³)</div></div>
     <div class="scard c-danger"><div class="scard-label">Em Falta</div><div class="scard-value" id="c-falta">—</div><div class="scard-sub">grupos com falta</div></div>
     <div class="scard c-teal"><div class="scard-label">Com Excesso</div><div class="scard-value" id="c-excesso">—</div><div class="scard-sub">grupos com excesso</div></div>
   </div>
@@ -438,9 +438,9 @@ tbody tr:last-child td { border-bottom: none; }
             <tr>
               <th>Espécie</th><th>Grupo Mestre</th><th>Padrão</th><th>Medida Mestre</th>
               <th>Comp</th><th>Larg</th><th>Esp</th><th>Status</th>
-              <th>Est. PCP ✓</th><th>Est. Compras ⚠</th>
-              <th>Falta Atual</th><th>Falta Seg</th><th>Total Atual</th>
-              <th>Saída 6m</th>
+              <th>Est. PCP ✓ (m³)</th><th>Est. Compras ⚠ (m³)</th>
+              <th>Falta Atual (m³)</th><th>Falta Seg (m³)</th><th>Total Atual (m³)</th>
+              <th>Saída 6m (m³)</th>
               <th>SKUs Produzíveis</th>
             </tr>
           </thead>
@@ -477,14 +477,15 @@ const C = {
   compr:4, larg:5, esp:6, status:7,
   estComp:8, estPCP:9, faltaAtual:10, faltaSeg:11,
   totalAtual:12, totalSeg:13, refInd:14, refAgrup:15, medida:16,
-  saidaSemestral:18,  // col S (índice 18)
-  demandaTotal:19     // col T (índice 19)
+  saidaSemestral:18,  // col S
+  demandaTotal:19     // col T
 };
 // ── COLUNAS pcp440 (0-based) ─────────────────────────────────
 const PCP = { ref:0, saidaVol:37 }; // col A=0, col AL=37
 
 let allRows=[], grouped=[], filtered=[];
-let pcpMap = new Map();   // ref → volume saída pcp440
+let pcpMap = new Map();     // ref → volume saída
+let pcpFinMap = new Map(); // ref → {preco, cpv, margem} pcp440
 let ch1=null, ch2=null;
 let currentSubtab='exact';
 
@@ -493,6 +494,9 @@ const cl  = v => (v||'').replace(/^"|"$/g,'').trim();
 const num = v => { const n=parseFloat(cl(v).replace(/\./g,'').replace(',','.')); return isNaN(n)?0:n; };
 const fmt = n => n ? n.toLocaleString('pt-BR',{maximumFractionDigits:0}) : '0';
 const fmtVol = n => n ? n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) : '0,00';
+const fmtBRL = n => n ? 'R$ '+n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
+const fmtPct = n => n ? n.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'%' : '—';
+const margemColor = p => p>=40?'var(--teal)':p>=20?'var(--warn)':'var(--danger)';
 const hasDigit = g => /\d/.test(g||'');
 
 function splitLine(line) {
@@ -550,18 +554,36 @@ async function loadSheet() {
 }
 
 // ── PARSE PCP440 ─────────────────────────────────────────────
-// Col A = referência, Col AL (índice 37) = volume saída
+// Col A=0 → SKU | Col AL=37 → saída vol | Col AN=40 → preço | Col AO=41 → CPV | Col AP=42 → margem
 function parsePcp440(text) {
   pcpMap.clear();
   const lines=text.trim().split('\n');
+  const finAcc = new Map();
   for(let i=1;i<lines.length;i++){
     const cols=splitLine(lines[i]);
-    const ref=cl(cols[PCP.ref]);
-    const vol=num(cols[PCP.saidaVol]);
+    const ref=cl(cols[0]);
     if(!ref) continue;
-    // acumula caso ref apareça mais de uma vez
+    // volume saída (col AL = índice 37)
+    const vol=num(cols[37]);
     pcpMap.set(ref, (pcpMap.get(ref)||0) + vol);
+    // financeiro (cols AN=40, AO=41, AP=42)
+    const p =num(cols[40]);
+    const cv=num(cols[41]);
+    const mg=num(cols[42]);
+    if(p||cv||mg){
+      const acc=finAcc.get(ref)||{p:0,cv:0,mg:0,n:0};
+      acc.p+=p; acc.cv+=cv; acc.mg+=mg; acc.n++;
+      finAcc.set(ref,acc);
+    }
   }
+  pcpFinMap.clear();
+  finAcc.forEach((acc,ref)=>{
+    pcpFinMap.set(ref,{
+      preco: acc.n>0 ? acc.p/acc.n  : 0,
+      cpv:   acc.n>0 ? acc.cv/acc.n : 0,
+      margem:acc.n>0 ? acc.mg/acc.n : 0
+    });
+  });
 }
 
 // ── PARSE PRINCIPAL ──────────────────────────────────────────
@@ -738,12 +760,12 @@ function renderTable(){
       <td style="text-align:right">${g.larg||'—'}</td>
       <td style="text-align:right">${g.esp||'—'}</td>
       <td>${badge(g.statusFinal)}</td>
-      <td style="text-align:right;color:var(--teal)">${fmt(g.estPCP)}</td>
-      <td style="text-align:right"><span style="color:var(--warn)">${fmt(g.estComp)}</span><span class="b-warn-sm">⚠</span></td>
-      <td style="text-align:right;color:${g.faltaAtual>0?'var(--danger)':'var(--muted)'}">${fmt(g.faltaAtual)}</td>
-      <td style="text-align:right;color:${g.faltaSeg>0?'var(--warn)':'var(--muted)'}">${fmt(g.faltaSeg)}</td>
-      <td style="text-align:right">${fmt(g.totalAtual)}</td>
-      <td style="text-align:right;color:var(--blue)">${fmtVol(g.saidaSemestral)}</td>
+      <td style="text-align:right;color:var(--teal)">${fmt(g.estPCP)} m³</td>
+      <td style="text-align:right"><span style="color:var(--warn)">${fmt(g.estComp)} m³</span><span class="b-warn-sm">⚠</span></td>
+      <td style="text-align:right;color:${g.faltaAtual>0?'var(--danger)':'var(--muted)'}">${fmt(g.faltaAtual)} m³</td>
+      <td style="text-align:right;color:${g.faltaSeg>0?'var(--warn)':'var(--muted)'}">${fmt(g.faltaSeg)} m³</td>
+      <td style="text-align:right">${fmt(g.totalAtual)} m³</td>
+      <td style="text-align:right;color:var(--blue)">${fmtVol(g.saidaSemestral)} m³</td>
       <td>${skuHtml}</td>
     </tr>`;
   }
@@ -791,7 +813,7 @@ function renderQueima() {
       <div class="queima-subtitle">Maiores volumes disponíveis · Prioridade para oferta ao comercial</div>
     </div>
     <div>
-      <div class="queima-total">${fmt(totalExcesso)} un</div>
+      <div class="queima-total">${fmt(totalExcesso)} m³</div>
       <div class="queima-total-label">total em excesso (top 5)</div>
     </div>
   </div>`;
@@ -827,9 +849,9 @@ function renderQueima() {
           ${dims?`<div class="medida-dims">${dims} mm · ${medObj.grupos.length} grupo(s) em excesso · ${skuCards.length} SKU(s)</div>`:''}
         </div>
         <div class="medida-estoque">
-          <div class="medida-estoque-val">${fmt(medObj.estPCP)} un</div>
+          <div class="medida-estoque-val">${fmt(medObj.estPCP)} m³</div>
           <div class="medida-estoque-label">estoque PCP disponível</div>
-          ${medObj.demandaTotal>0?`<div style="font-size:11px;color:var(--warn);font-weight:600;margin-top:3px">${fmt(medObj.demandaTotal)} un faltantes</div>`:''}
+          ${medObj.demandaTotal>0?`<div style="font-size:11px;color:var(--warn);font-weight:600;margin-top:3px">${fmt(medObj.demandaTotal)} m³ faltantes</div>`:''}
         </div>
       </div>
       <div class="sku-grid">
@@ -854,6 +876,8 @@ function renderQueima() {
 function buildSkuCard(sc){
   const {ref, grupo:g, volSaida, demandaTotal}=sc;
   const imgUrl=`https://assets.tramontina.com.br/upload/tramon/imagens/BEL/${ref}PDM001G.jpg`;
+  const fin = pcpFinMap.get(ref) || {preco:0, cpv:0, margem:0};
+  const mgColor = fin.margem>0 ? margemColor(fin.margem) : 'var(--muted)';
 
   return `
   <div class="sku-card">
@@ -886,11 +910,24 @@ function buildSkuCard(sc){
         <hr class="sku-divider">
         <div class="sku-stat-row">
           <span class="sku-stat-label">Estoque PCP</span>
-          <span class="sku-stat-val green">${fmt(g.estPCP)} un</span>
+          <span class="sku-stat-val green">${fmtVol(g.estPCP)} m³</span>
         </div>
         <div class="sku-stat-row">
           <span class="sku-stat-label">Demanda faltante</span>
-          <span class="sku-stat-val ${demandaTotal>0?'red':'green'}">${demandaTotal>0?fmt(demandaTotal)+' un':'—'}</span>
+          <span class="sku-stat-val ${demandaTotal>0?'red':'green'}">${demandaTotal>0?fmtVol(demandaTotal)+' m³':'—'}</span>
+        </div>
+        <hr class="sku-divider">
+        <div class="sku-stat-row">
+          <span class="sku-stat-label">Preço médio</span>
+          <span class="sku-stat-val">${fin.preco>0?fmtBRL(fin.preco)+'<span style="font-size:9px;color:var(--muted);font-weight:400">/m³</span>':'—'}</span>
+        </div>
+        <div class="sku-stat-row">
+          <span class="sku-stat-label">CPV médio</span>
+          <span class="sku-stat-val">${fin.cpv>0?fmtBRL(fin.cpv)+'<span style="font-size:9px;color:var(--muted);font-weight:400">/m³</span>':'—'}</span>
+        </div>
+        <div class="sku-stat-row">
+          <span class="sku-stat-label">Margem média</span>
+          <span class="sku-stat-val" style="color:${mgColor}">${fin.margem>0?fmtPct(fin.margem):'—'}</span>
         </div>
       </div>
     </div>
@@ -902,6 +939,7 @@ function buildSkuCard(sc){
     </div>
   </div>`;
 }
+
 
 // ══════════════════════════════════════════════════════════════
 // ── SUBSTITUIÇÃO (mantida igual) ──────────────────────────────
@@ -983,8 +1021,8 @@ function makeEspecieCard(g,cls,tipText,tipCls){
   return`<div class="ce ${cls}"><div class="ce-name">${g.especie} · ${g.grupoMestre}</div>
     <div class="ce-row"><span>Padrão</span><span>${g.padrao||'—'}</span></div>
     <div class="ce-row"><span>Status</span><span>${badge(g.statusFinal)}</span></div>
-    <div class="ce-row"><span>Est. PCP</span><span style="color:var(--teal)">${fmt(g.estPCP)}</span></div>
-    <div class="ce-row"><span>Falta Atual</span><span style="color:${g.faltaAtual>0?'var(--danger)':'var(--muted)'}">${fmt(g.faltaAtual)}</span></div>
+    <div class="ce-row"><span>Est. PCP</span><span style="color:var(--teal)">${fmt(g.estPCP)} m³</span></div>
+    <div class="ce-row"><span>Falta Atual</span><span style="color:${g.faltaAtual>0?'var(--danger)':'var(--muted)'}">${fmt(g.faltaAtual)} m³</span></div>
     ${skuHtml}${tip}</div>`;
 }
 function makeSkuHtml(g){
@@ -1016,7 +1054,7 @@ function renderSubtab(data){
       const tgtD=[tgt.compr,tgt.larg,tgt.esp].filter(Boolean).join(' × ');
       const lossHC=loss?lossClass(loss.pct):'';
       const lossColor=lossHC==='low'?'var(--teal)':lossHC==='medium'?'var(--warn)':'var(--danger)';
-      return`<div class="cross-card"><div class="cross-head"><span class="cross-medida">${src.medida}</span><span style="color:var(--muted);font-size:18px;margin:0 4px">→</span><span class="cross-medida" style="color:var(--blue)">${tgt.medida}</span><span class="cross-type-badge ${pair.crossSpecies?'ctb-excess':'ctb-cut'}">${pair.crossSpecies?'Entre espécies':'Corte'}</span>${loss&&loss.complexProcess?`<span class="cross-type-badge" style="background:rgba(176,126,247,0.1);color:var(--purple);border:1px solid rgba(176,126,247,0.3);margin-left:4px">Processo complexo</span>`:''}<span style="margin-left:auto;font-size:11px;color:${lossColor};font-weight:600">${loss?loss.pct.toFixed(1)+'% perda':'—'}</span></div><div class="cross-body" style="align-items:flex-start"><div class="ce source" style="flex:2"><div class="ce-name">${src.especie} · ${src.grupoMestre}</div><div class="ce-row"><span>Medida</span><span>${src.medida}</span></div><div class="ce-row"><span>Dimensões</span><span>${srcD} mm</span></div><div class="ce-row"><span>Status</span><span>${badge(src.statusFinal)}</span></div><div class="ce-row"><span>Est. PCP</span><span style="color:var(--teal)">${fmt(src.estPCP)}</span></div>${loss?`<div class="ce-row"><span>Volume</span><span style="color:var(--muted)">${loss.volSrc.toFixed(4)} m³/un</span></div>`:''} ${makeSkuHtml(src)}<div class="ce-tip info">↑ Excesso disponível</div></div>${renderLossBox(loss)}<div class="ce target" style="flex:2"><div class="ce-name">${tgt.especie} · ${tgt.grupoMestre}</div><div class="ce-row"><span>Medida</span><span>${tgt.medida}</span></div><div class="ce-row"><span>Dimensões</span><span>${tgtD} mm</span></div><div class="ce-row"><span>Status</span><span>${badge(tgt.statusFinal)}</span></div><div class="ce-row"><span>Falta Atual</span><span style="color:var(--danger)">${fmt(tgt.faltaAtual)}</span></div><div class="ce-row"><span>Falta Seg</span><span style="color:var(--warn)">${fmt(tgt.faltaSeg)}</span></div>${loss?`<div class="ce-row"><span>Volume</span><span style="color:var(--muted)">${loss.volTgt.toFixed(4)} m³/un</span></div>`:''} ${makeSkuHtml(tgt)}<div class="ce-tip bad">↓ Em falta</div>${pair.crossSpecies?`<div class="ce-tip warn">⚠ Espécies diferentes — confirmar com PCP</div>`:''} ${renderProcessAlert(loss)}</div></div></div>`;
+      return`<div class="cross-card"><div class="cross-head"><span class="cross-medida">${src.medida}</span><span style="color:var(--muted);font-size:18px;margin:0 4px">→</span><span class="cross-medida" style="color:var(--blue)">${tgt.medida}</span><span class="cross-type-badge ${pair.crossSpecies?'ctb-excess':'ctb-cut'}">${pair.crossSpecies?'Entre espécies':'Corte'}</span>${loss&&loss.complexProcess?`<span class="cross-type-badge" style="background:rgba(176,126,247,0.1);color:var(--purple);border:1px solid rgba(176,126,247,0.3);margin-left:4px">Processo complexo</span>`:''}<span style="margin-left:auto;font-size:11px;color:${lossColor};font-weight:600">${loss?loss.pct.toFixed(1)+'% perda':'—'}</span></div><div class="cross-body" style="align-items:flex-start"><div class="ce source" style="flex:2"><div class="ce-name">${src.especie} · ${src.grupoMestre}</div><div class="ce-row"><span>Medida</span><span>${src.medida}</span></div><div class="ce-row"><span>Dimensões</span><span>${srcD} mm</span></div><div class="ce-row"><span>Status</span><span>${badge(src.statusFinal)}</span></div><div class="ce-row"><span>Est. PCP</span><span style="color:var(--teal)">${fmt(src.estPCP)} m³</span></div>${loss?`<div class="ce-row"><span>Volume</span><span style="color:var(--muted)">${loss.volSrc.toFixed(4)} m³/un</span></div>`:''} ${makeSkuHtml(src)}<div class="ce-tip info">↑ Excesso disponível</div></div>${renderLossBox(loss)}<div class="ce target" style="flex:2"><div class="ce-name">${tgt.especie} · ${tgt.grupoMestre}</div><div class="ce-row"><span>Medida</span><span>${tgt.medida}</span></div><div class="ce-row"><span>Dimensões</span><span>${tgtD} mm</span></div><div class="ce-row"><span>Status</span><span>${badge(tgt.statusFinal)}</span></div><div class="ce-row"><span>Falta Atual</span><span style="color:var(--danger)">${fmt(tgt.faltaAtual)} m³</span></div><div class="ce-row"><span>Falta Seg</span><span style="color:var(--warn)">${fmt(tgt.faltaSeg)} m³</span></div>${loss?`<div class="ce-row"><span>Volume</span><span style="color:var(--muted)">${loss.volTgt.toFixed(4)} m³/un</span></div>`:''} ${makeSkuHtml(tgt)}<div class="ce-tip bad">↓ Em falta</div>${pair.crossSpecies?`<div class="ce-tip warn">⚠ Espécies diferentes — confirmar com PCP</div>`:''} ${renderProcessAlert(loss)}</div></div></div>`;
     }).join('');
   } else if(currentSubtab==='excess'){
     legend.innerHTML=`<div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>Excesso sem demanda identificada</div>`;
@@ -1024,7 +1062,7 @@ function renderSubtab(data){
     grid.innerHTML='<div style="display:flex;flex-wrap:wrap;gap:10px">'+data.excessSolo.map(g=>{
       const r=[...new Set([...g.refs,...g.refsAgrup])].slice(0,8);
       const sk=r.length?`<div class="sku-list" style="margin-top:6px">${r.map(s=>`<span class="sku">${s}</span>`).join('')}</div>`:'';
-      return`<div class="ce alert-excess" style="min-width:220px;max-width:320px;flex:1"><div class="ce-name">${g.especie} · ${g.grupoMestre}</div><div class="ce-row"><span>Medida</span><span style="color:var(--accent)">${g.medida}</span></div><div class="ce-row"><span>Dimensões</span><span>${[g.compr,g.larg,g.esp].filter(Boolean).join(' × ')} mm</span></div><div class="ce-row"><span>Status</span><span>${badge(g.statusFinal)}</span></div><div class="ce-row"><span>Est. PCP</span><span style="color:var(--teal)">${fmt(g.estPCP)}</span></div>${sk}<div class="ce-tip accent">↑ Oferecer ao comercial ou avaliar transformação</div></div>`;
+      return`<div class="ce alert-excess" style="min-width:220px;max-width:320px;flex:1"><div class="ce-name">${g.especie} · ${g.grupoMestre}</div><div class="ce-row"><span>Medida</span><span style="color:var(--accent)">${g.medida}</span></div><div class="ce-row"><span>Dimensões</span><span>${[g.compr,g.larg,g.esp].filter(Boolean).join(' × ')} mm</span></div><div class="ce-row"><span>Status</span><span>${badge(g.statusFinal)}</span></div><div class="ce-row"><span>Est. PCP</span><span style="color:var(--teal)">${fmt(g.estPCP)} m³</span></div>${sk}<div class="ce-tip accent">↑ Oferecer ao comercial ou avaliar transformação</div></div>`;
     }).join('')+'</div>';
   } else if(currentSubtab==='risk'){
     legend.innerHTML=`<div class="legend-item"><div class="legend-dot" style="background:var(--danger)"></div>Falta sem fonte de excesso identificada</div>`;
@@ -1034,7 +1072,7 @@ function renderSubtab(data){
       const mes1=g.statusFinal.includes('Mês1')||g.statusFinal.includes('Mes1');
       const r=[...new Set([...g.refs,...g.refsAgrup])].slice(0,8);
       const sk=r.length?`<div class="sku-list" style="margin-top:6px">${r.map(s=>`<span class="sku">${s}</span>`).join('')}</div>`:'';
-      return`<div class="ce alert-risk" style="min-width:220px;max-width:320px;flex:1"><div class="ce-name">${g.especie} · ${g.grupoMestre}</div><div class="ce-row"><span>Medida</span><span style="color:var(--accent)">${g.medida}</span></div><div class="ce-row"><span>Dimensões</span><span>${[g.compr,g.larg,g.esp].filter(Boolean).join(' × ')} mm</span></div><div class="ce-row"><span>Status</span><span>${badge(g.statusFinal)}</span></div><div class="ce-row"><span>Est. PCP</span><span style="color:var(--teal)">${fmt(g.estPCP)}</span></div><div class="ce-row"><span>Falta Atual</span><span style="color:var(--danger)">${fmt(g.faltaAtual)}</span></div><div class="ce-row"><span>Falta Seg</span><span style="color:var(--warn)">${fmt(g.faltaSeg)}</span></div>${sk}<div class="ce-tip ${mes1?'bad':'warn'}">${mes1?'🚨 Falta iminente — ação urgente.':'⚠ Risco no próximo mês.'}</div></div>`;
+      return`<div class="ce alert-risk" style="min-width:220px;max-width:320px;flex:1"><div class="ce-name">${g.especie} · ${g.grupoMestre}</div><div class="ce-row"><span>Medida</span><span style="color:var(--accent)">${g.medida}</span></div><div class="ce-row"><span>Dimensões</span><span>${[g.compr,g.larg,g.esp].filter(Boolean).join(' × ')} mm</span></div><div class="ce-row"><span>Status</span><span>${badge(g.statusFinal)}</span></div><div class="ce-row"><span>Est. PCP</span><span style="color:var(--teal)">${fmt(g.estPCP)} m³</span></div><div class="ce-row"><span>Falta Atual</span><span style="color:var(--danger)">${fmt(g.faltaAtual)} m³</span></div><div class="ce-row"><span>Falta Seg</span><span style="color:var(--warn)">${fmt(g.faltaSeg)} m³</span></div>${sk}<div class="ce-tip ${mes1?'bad':'warn'}">${mes1?'🚨 Falta iminente — ação urgente.':'⚠ Risco no próximo mês.'}</div></div>`;
     }).join('')+'</div>';
   }
 }
