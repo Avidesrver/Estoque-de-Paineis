@@ -927,7 +927,7 @@ function buildSkuCard(sc){
         </div>
         <div class="sku-stat-row">
           <span class="sku-stat-label">Margem média</span>
-          <span class="sku-stat-val" style="color:${mgColor}">${fin.margem>0?fmtPct(fin.margem):'—'}</span>
+         <span class="sku-stat-val" style="color:${mgColor}">${fin.margem !== 0 ? fmtPct(fin.margem) : '0%'}</span>
         </div>
       </div>
     </div>
