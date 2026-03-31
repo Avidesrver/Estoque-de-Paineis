@@ -877,7 +877,11 @@ function buildSkuCard(sc){
   const {ref, grupo:g, volSaida, demandaTotal}=sc;
   const imgUrl=`https://assets.tramontina.com.br/upload/tramon/imagens/BEL/${ref}PDM001G.jpg`;
   const fin = pcpFinMap.get(ref) || {preco:0, cpv:0, margem:0};
-  const mgColor = fin.margem<0.1 ? margemColor(fin.margem) : 'var(--muted)';
+  const mgColor = fin.margem < 0 
+  ? 'var(--danger)'           // Vermelho para prejuízo
+  : (fin.margem > 0.1 
+      ? 'var(--accent)'       // Verde apenas acima de 10%
+      : 'var(--warn)');       // Amarelo/Laranja entre 0% e 10%
 
   return `
   <div class="sku-card">
