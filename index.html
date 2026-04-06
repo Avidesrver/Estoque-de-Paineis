@@ -522,7 +522,7 @@ async function loadSheet() {
   try {
     // Busca aba principal
     const res=await fetch(`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&gid=${gid}`);
-    if(!res.ok) throw new Error('https'+res.status);
+    if(!res.ok) throw new Error('https '+res.status);
     const text=await res.text();
     if(text.startsWith('<!DOCTYPE')) throw new Error('PRIVATE');
 
@@ -796,25 +796,25 @@ function renderQueima() {
     byMedida[g.medida].grupos.push(g);
   }
 
-  // Top 5 por estPCP
+  // Top 10 por estPCP
   const top5=Object.values(byMedida)
     .sort((a,b)=>b.estPCP-a.estPCP)
-    .slice(0,5);
+    .slice(0,10);
 
   const totalExcesso=top5.reduce((s,m)=>s+m.estPCP,0);
   const totalSkus=top5.reduce((s,m)=>s+m.grupos.reduce((ss,g)=>ss+g.refsAgrup.length,0),0);
 
-  const rankEmojis=['🥇','🥈','🥉','4️⃣','5️⃣'];
+  const rankEmojis=['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'];
 
   let html=`
   <div class="queima-banner">
     <div>
-      <div class="queima-title">↑ EXCESSO DE ESTOQUE — TOP 5 MEDIDAS</div>
+      <div class="queima-title">↑ EXCESSO DE ESTOQUE — TOP 10 MEDIDAS</div>
       <div class="queima-subtitle">Maiores volumes disponíveis · Prioridade para oferta ao comercial</div>
     </div>
     <div>
       <div class="queima-total">${fmt(totalExcesso)} m³</div>
-      <div class="queima-total-label">total em excesso (top 5)</div>
+      <div class="queima-total-label">total em excesso (top 10)</div>
     </div>
   </div>`;
 
@@ -877,11 +877,7 @@ function buildSkuCard(sc){
   const {ref, grupo:g, volSaida, demandaTotal}=sc;
   const imgUrl=`https://assets.tramontina.com.br/upload/tramon/imagens/BEL/${ref}PDM001G.jpg`;
   const fin = pcpFinMap.get(ref) || {preco:0, cpv:0, margem:0};
-  const mgColor = fin.margem < 0 
-  ? 'var(--danger)'           // Vermelho para prejuízo
-  : (fin.margem > 10 
-      ? 'var(--accent)'       // Verde apenas acima de 10%
-      : 'var(--warn)');       // Amarelo/Laranja entre 0% e 10%
+  const mgColor = fin.margem>0 ? margemColor(fin.margem) : 'var(--muted)';
 
   return `
   <div class="sku-card">
@@ -931,7 +927,7 @@ function buildSkuCard(sc){
         </div>
         <div class="sku-stat-row">
           <span class="sku-stat-label">Margem média</span>
-         <span class="sku-stat-val" style="color:${mgColor}">${fin.margem !== 0 ? fmtPct(fin.margem) : '0%'}</span>
+          <span class="sku-stat-val" style="color:${mgColor}">${fin.margem>0?fmtPct(fin.margem):'—'}</span>
         </div>
       </div>
     </div>
@@ -943,7 +939,7 @@ function buildSkuCard(sc){
     </div>
   </div>`;
 }
-
+}
 
 // ══════════════════════════════════════════════════════════════
 // ── SUBSTITUIÇÃO (mantida igual) ──────────────────────────────
