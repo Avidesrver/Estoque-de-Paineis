@@ -804,7 +804,7 @@ function renderQueima() {
   const totalExcesso=top5.reduce((s,m)=>s+m.estPCP,0);
   const totalSkus=top5.reduce((s,m)=>s+m.grupos.reduce((ss,g)=>ss+g.refsAgrup.length,0),0);
 
-  const rankEmojis=['🥇','🥈','🥉','4️⃣','5️⃣'];
+  const rankEmojis=['🥇','🥈','🥉','4️⃣','5️⃣','5️⃣'];
 
   let html=`
   <div class="queima-banner">
