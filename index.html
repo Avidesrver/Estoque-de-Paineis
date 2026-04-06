@@ -512,6 +512,49 @@ function extractGid(url){ const m=url.match(/gid=(\d+)/); return m?m[1]:'0'; }
 function setStatus(msg,cls=''){ const el=document.getElementById('status-msg'); el.textContent=msg; el.className=cls; }
 
 // ── LOAD PRINCIPAL ───────────────────────────────────────────
+// Helpers de fetch com timeout e múltiplos proxies
+const PROXIES = [
+  u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+  u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+  u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+];
+
+async function fetchWithTimeout(url, ms=12000) {
+  const ctrl = new AbortController();
+  const tid = setTimeout(()=>ctrl.abort(), ms);
+  try {
+    const r = await fetch(url, {signal: ctrl.signal});
+    clearTimeout(tid);
+    return r;
+  } catch(e) {
+    clearTimeout(tid);
+    throw e;
+  }
+}
+
+async function fetchSheet(url) {
+  // Tenta direto primeiro (funciona quando a planilha é pública e sem CORS)
+  try {
+    const r = await fetchWithTimeout(url, 8000);
+    if(r.ok) {
+      const t = await r.text();
+      if(!t.startsWith('<!DOCTYPE') && !t.startsWith('<html') && t.length > 10) return t;
+    }
+  } catch(_){}
+
+  // Tenta cada proxy em sequência
+  for(const makeProxy of PROXIES) {
+    try {
+      const r = await fetchWithTimeout(makeProxy(url), 10000);
+      if(r.ok) {
+        const t = await r.text();
+        if(!t.startsWith('<!DOCTYPE') && !t.startsWith('<html') && t.length > 10) return t;
+      }
+    } catch(_){}
+  }
+  throw new Error('Todos os proxies falharam');
+}
+
 async function loadSheet() {
   const url=document.getElementById('sheet-url').value.trim();
   const id=extractId(url); if(!id){setStatus('Link inválido','err');return;}
@@ -519,37 +562,24 @@ async function loadSheet() {
   setStatus('Conectando...','');
   document.getElementById('tbody').innerHTML='<tr><td colspan="15"><div class="loading"><div class="spinner"></div>Buscando dados...</div></td></tr>';
 
+  const urlMain = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&gid=${gid}`;
+  const urlPcp  = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=pcp440`;
+
   try {
-    // Busca aba principal
-    const res=await fetch(`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&gid=${gid}`);
-    if(!res.ok) throw new Error('https '+res.status);
-    const text=await res.text();
-    if(text.startsWith('<!DOCTYPE')) throw new Error('PRIVATE');
+    setStatus('Carregando abas em paralelo...','');
 
-    // Busca aba pcp440 em paralelo
-    const resPcp=await fetch(`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=pcp440`);
-    if(resPcp.ok){
-      const txtPcp=await resPcp.text();
-      parsePcp440(txtPcp);
-    }
+    // Busca as duas abas ao mesmo tempo
+    const [textMain, textPcp] = await Promise.all([
+      fetchSheet(urlMain),
+      fetchSheet(urlPcp).catch(()=>null)  // pcp440 é opcional — não bloqueia se falhar
+    ]);
 
-    parseData(text);
+    if(textPcp) parsePcp440(textPcp);
+    parseData(textMain);
+
   } catch(e) {
-    try {
-      const proxy='https://api.allorigins.win/raw?url=';
-      const su=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&gid=${gid}`;
-      const r2=await fetch(proxy+encodeURIComponent(su));
-      if(!r2.ok) throw new Error('PROXY');
-      parseData(await r2.text());
-      // tenta pcp440 via proxy
-      try {
-        const su2=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=pcp440`;
-        const r3=await fetch(proxy+encodeURIComponent(su2));
-        if(r3.ok) parsePcp440(await r3.text());
-      } catch(_){}
-    } catch(e2){
-      setStatus('Erro: Verifique se a planilha está pública','err');
-    }
+    setStatus('Erro ao carregar — verifique se a planilha está pública','err');
+    document.getElementById('tbody').innerHTML='<tr><td colspan="15"><div class="placeholder"><div class="ico">⚠</div><p>Não foi possível carregar a planilha. Verifique se está com acesso público ("qualquer pessoa com o link").</p></div></td></tr>';
   }
 }
 
