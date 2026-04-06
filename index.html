@@ -799,7 +799,7 @@ function renderQueima() {
   // Top 5 por estPCP
   const top5=Object.values(byMedida)
     .sort((a,b)=>b.estPCP-a.estPCP)
-    .slice(0,5);
+    .slice(0,10);
 
   const totalExcesso=top5.reduce((s,m)=>s+m.estPCP,0);
   const totalSkus=top5.reduce((s,m)=>s+m.grupos.reduce((ss,g)=>ss+g.refsAgrup.length,0),0);
